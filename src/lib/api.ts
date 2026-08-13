@@ -40,6 +40,7 @@ class ApiClient {
     );
   }
 
+  // Media & File Uploads
   async uploadMedia(file: File): Promise<{ id: string; url: string }> {
     const formData = new FormData();
     formData.append('file', file);
@@ -50,6 +51,24 @@ class ApiClient {
       },
     });
     return res.data;
+  }
+
+  async uploadImage(fileOrFormData: File | FormData): Promise<{ success: boolean; url: string; data: { url: string } }> {
+    let file: File;
+
+    if (fileOrFormData instanceof FormData) {
+      file = fileOrFormData.get('file') as File;
+    } else {
+      file = fileOrFormData;
+    }
+
+    const res = await this.uploadMedia(file);
+
+    return {
+      success: true,
+      url: res.url,
+      data: { url: res.url },
+    };
   }
 
   // Auth
