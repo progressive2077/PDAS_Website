@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import Cookies from 'js-cookie';
+import { GalleryItem } from '@/types';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -188,22 +189,22 @@ class ApiClient {
   }
 
   // Admin - Gallery
-  async getAdminGallery() {
+  async getAdminGallery(): Promise<ApiResponse<GalleryItem[]>> {
     const res = await this.client.get('/api/admin/gallery');
     return res.data;
   }
 
-  async createGalleryItem(data: Record<string, unknown>) {
+  async createGalleryItem(data: Partial<GalleryItem>): Promise<ApiResponse<GalleryItem>> {
     const res = await this.client.post('/api/admin/gallery', data);
     return res.data;
   }
 
-  async updateGalleryItem(id: string, data: Record<string, unknown>) {
+  async updateGalleryItem(id: string, data: Partial<GalleryItem>): Promise<ApiResponse<GalleryItem>> {
     const res = await this.client.put(`/api/admin/gallery/${id}`, data);
     return res.data;
   }
 
-  async deleteGalleryItem(id: string) {
+  async deleteGalleryItem(id: string): Promise<ApiResponse<null>> {
     const res = await this.client.delete(`/api/admin/gallery/${id}`);
     return res.data;
   }

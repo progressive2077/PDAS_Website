@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, useCallback, ChangeEvent } from 'react';
+import { useEffect, useState, useCallback, ChangeEvent, useRef } from 'react';
 import Image from 'next/image';
 import { Plus, Pencil, Trash2, Search, Eye, EyeOff, Upload, Loader2, ImageOff } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { api } from '@/lib/api';
+import { api, ApiResponse } from '@/lib/api';
 import { GalleryItem } from '@/types';
 import Modal from '@/components/ui/Modal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -40,12 +40,16 @@ export default function AdminGalleryPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageError, setImageError] = useState<Record<string, boolean>>({});
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.getAdminGallery();
-      if (res?.success && res?.data) {
+      if (res?.success && Array.isArray(res.data)) {
         setItems(res.data);
+      } else if (Array.isArray(res)) {
+        setItems(res as unknown as GalleryItem[]);
       }
     } catch {
       toast.error('Failed to load gallery items');
@@ -94,6 +98,9 @@ export default function AdminGalleryPage() {
       toast.error('Failed to upload image');
     } finally {
       setUploadingImage(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -102,22 +109,23 @@ export default function AdminGalleryPage() {
       toast.error('Title and image URL are required');
       return;
     }
+
     setSaving(true);
     try {
+      let res: ApiResponse<GalleryItem>;
+
       if (editingId) {
-        const res = await api.updateGalleryItem(editingId, form);
-        if (res?.success) {
-          toast.success('Gallery item updated');
-          setModalOpen(false);
-          fetchItems();
-        }
+        res = await api.updateGalleryItem(editingId, form);
       } else {
-        const res = await api.createGalleryItem(form);
-        if (res?.success) {
-          toast.success('Gallery item added');
-          setModalOpen(false);
-          fetchItems();
-        }
+        res = await api.createGalleryItem(form);
+      }
+
+      if (res?.success || res?.data) {
+        toast.success(editingId ? 'Gallery item updated' : 'Gallery item added');
+        setModalOpen(false);
+        fetchItems();
+      } else {
+        toast.error('Failed to save gallery item');
       }
     } catch {
       toast.error('Failed to save gallery item');
@@ -144,7 +152,7 @@ export default function AdminGalleryPage() {
       toast.success(item.is_published ? 'Unpublished' : 'Published');
       fetchItems();
     } catch {
-      toast.error('Failed to update');
+      toast.error('Failed to update status');
     }
   };
 
@@ -161,7 +169,7 @@ export default function AdminGalleryPage() {
           <h1 className="font-display text-2xl font-bold text-gray-900">Gallery</h1>
           <p className="text-gray-500 text-sm mt-0.5">{items.length} total images</p>
         </div>
-        <button onClick={openCreate} className="btn-primary">
+        <button onClick={openCreate} className="btn-primary flex items-center gap-2">
           <Plus className="w-4 h-4" /> Add Image
         </button>
       </div>
@@ -174,7 +182,7 @@ export default function AdminGalleryPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search gallery…"
-            className="form-input pl-10"
+            className="form-input pl-10 w-full"
           />
         </div>
       </div>
@@ -192,7 +200,7 @@ export default function AdminGalleryPage() {
           {filtered.map((item) => (
             <div
               key={item.id}
-              className="group relative rounded-xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all bg-white"
+              className="group relative rounded-xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all bg-white flex flex-col justify-between"
             >
               <div className="relative aspect-square bg-gray-100">
                 {item.image_url && !imageError[item.id] ? (
@@ -200,6 +208,7 @@ export default function AdminGalleryPage() {
                     src={item.image_url}
                     alt={item.title || 'Gallery image'}
                     fill
+                    unoptimized
                     className="object-cover"
                     onError={() => setImageError((prev) => ({ ...prev, [item.id]: true }))}
                   />
@@ -209,7 +218,7 @@ export default function AdminGalleryPage() {
                     <span>No Image</span>
                   </div>
                 )}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                   <button
                     onClick={() => handleTogglePublish(item)}
                     className="p-2 bg-white rounded-lg hover:bg-amber-50 text-amber-600 transition-colors"
@@ -219,7 +228,7 @@ export default function AdminGalleryPage() {
                   </button>
                   <button
                     onClick={() => openEdit(item)}
-                    className="p-2 bg-white rounded-lg hover:bg-pcfi-green-50 text-pcfi-green-600 transition-colors"
+                    className="p-2 bg-white rounded-lg hover:bg-emerald-50 text-emerald-600 transition-colors"
                     title="Edit item"
                   >
                     <Pencil className="w-4 h-4" />
@@ -233,7 +242,7 @@ export default function AdminGalleryPage() {
                   </button>
                 </div>
               </div>
-              <div className="p-3 bg-white">
+              <div className="p-3 bg-white border-t border-gray-100">
                 <p className="text-sm font-medium text-gray-900 truncate">{item.title || 'Untitled'}</p>
                 <div className="flex items-center justify-between mt-1.5">
                   <span className="text-xs text-gray-400">{item.category || 'Uncategorized'}</span>
@@ -256,9 +265,9 @@ export default function AdminGalleryPage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="form-label">Title *</label>
+            <label className="form-label block text-sm font-medium mb-1">Title *</label>
             <input
-              className="form-input"
+              className="form-input w-full"
               value={form.title}
               onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
               placeholder="e.g. Corn Silage Process"
@@ -266,7 +275,7 @@ export default function AdminGalleryPage() {
           </div>
 
           <div>
-            <label className="form-label">Image *</label>
+            <label className="form-label block text-sm font-medium mb-1">Image *</label>
             <div className="flex items-center gap-3">
               <input
                 className="form-input flex-1"
@@ -274,10 +283,16 @@ export default function AdminGalleryPage() {
                 onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))}
                 placeholder="https://... or upload a file"
               />
-              <label className="btn-secondary flex items-center gap-2 cursor-pointer py-2 px-3 text-sm shrink-0">
+              <label className="btn-secondary flex items-center gap-2 cursor-pointer py-2 px-3 text-sm shrink-0 border rounded-lg hover:bg-gray-50">
                 {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                 Upload
-                <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
               </label>
             </div>
           </div>
@@ -289,9 +304,9 @@ export default function AdminGalleryPage() {
           )}
 
           <div>
-            <label className="form-label">Description</label>
+            <label className="form-label block text-sm font-medium mb-1">Description</label>
             <textarea
-              className="form-input h-20 resize-none"
+              className="form-input w-full h-20 resize-none"
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               placeholder="Optional description…"
@@ -300,9 +315,9 @@ export default function AdminGalleryPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="form-label">Category</label>
+              <label className="form-label block text-sm font-medium mb-1">Category</label>
               <select
-                className="form-input"
+                className="form-input w-full"
                 value={form.category}
                 onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
               >
@@ -313,10 +328,10 @@ export default function AdminGalleryPage() {
               </select>
             </div>
             <div>
-              <label className="form-label">Sort Order</label>
+              <label className="form-label block text-sm font-medium mb-1">Sort Order</label>
               <input
                 type="number"
-                className="form-input"
+                className="form-input w-full"
                 value={form.sort_order}
                 onChange={(e) => {
                   const val = parseInt(e.target.value, 10);
@@ -332,7 +347,7 @@ export default function AdminGalleryPage() {
               id="gallery_published"
               checked={form.is_published}
               onChange={(e) => setForm((f) => ({ ...f, is_published: e.target.checked }))}
-              className="w-4 h-4 rounded text-pcfi-green-600 border-gray-300 focus:ring-pcfi-green-500"
+              className="w-4 h-4 rounded text-emerald-600 border-gray-300 focus:ring-emerald-500"
             />
             <label htmlFor="gallery_published" className="text-sm font-medium text-gray-700 cursor-pointer">
               Publish immediately
@@ -349,7 +364,7 @@ export default function AdminGalleryPage() {
             <button
               onClick={handleSave}
               disabled={saving || uploadingImage}
-              className="btn-primary py-2 disabled:opacity-60"
+              className="btn-primary py-2 px-4 disabled:opacity-60"
             >
               {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Add Image'}
             </button>
