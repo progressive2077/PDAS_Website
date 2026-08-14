@@ -22,6 +22,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import Badge from '@/components/ui/Badge';
 
 interface CreateForm {
+  [key: string]: unknown;
   email: string;
   password: string;
   full_name: string;
@@ -29,6 +30,7 @@ interface CreateForm {
 }
 
 interface EditForm {
+  [key: string]: unknown;
   full_name: string;
   email: string;
   is_active: boolean;
@@ -157,13 +159,14 @@ export default function AdminEmployeesPage() {
   // Role & Permissions
   const openRole = (emp: User) => {
     setEditingId(emp.id);
+    const perms = (emp.permissions || {}) as Record<string, boolean>;
     setRoleForm({
       role: emp.role,
       permissions: {
-        can_manage_products: !!emp.permissions?.can_manage_products,
-        can_manage_gallery: !!emp.permissions?.can_manage_gallery,
-        can_manage_content: !!emp.permissions?.can_manage_content,
-        can_manage_users: !!emp.permissions?.can_manage_users,
+        can_manage_products: Boolean(perms.can_manage_products),
+        can_manage_gallery: Boolean(perms.can_manage_gallery),
+        can_manage_content: Boolean(perms.can_manage_content),
+        can_manage_users: Boolean(perms.can_manage_users),
       },
     });
     setRoleOpen(true);
@@ -569,7 +572,7 @@ export default function AdminEmployeesPage() {
                   <span className="text-sm text-gray-700">{label}</span>
                   <input
                     type="checkbox"
-                    checked={!!roleForm.permissions[key]}
+                    checked={Boolean(roleForm.permissions[key])}
                     onChange={(e) =>
                       setRoleForm((f) => ({
                         ...f,
@@ -625,7 +628,7 @@ export default function AdminEmployeesPage() {
 
       {/* DELETE Confirm */}
       <ConfirmDialog
-        open={!!deleteId}
+        open={Boolean(deleteId)}
         title="Remove Employee"
         message="This will permanently delete the employee account. This action cannot be undone."
         confirmLabel="Remove"
