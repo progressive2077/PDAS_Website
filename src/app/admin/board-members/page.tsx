@@ -9,7 +9,9 @@ import Modal from '@/components/ui/Modal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import Badge from '@/components/ui/Badge';
 
+// FIX 1: Added index signature `[key: string]: unknown;` to make BoardMember compatible with Record<string, unknown>
 interface BoardMember {
+  [key: string]: unknown;
   id: string;
   full_name: string;
   title: string;
@@ -87,7 +89,7 @@ export default function AdminBoardMembersPage() {
     setUploadingImage(true);
     try {
       const formData = new FormData();
-      formData.append('file', file); // Change to 'image' if your backend expects req.files.image
+      formData.append('file', file);
 
       const res = await api.uploadImage(formData);
 
@@ -96,7 +98,9 @@ export default function AdminBoardMembersPage() {
         setForm((f) => ({ ...f, image_url: imageUrl }));
         toast.success('Image uploaded successfully');
       } else {
-        toast.error(res.error || 'Failed to upload image');
+        // FIX 2: Safely access error property to satisfy TypeScript
+        const errorMsg = (res as { error?: string })?.error || 'Failed to upload image';
+        toast.error(errorMsg);
       }
     } catch (err: any) {
       console.error('Upload error details:', err.response?.data || err.message);
@@ -151,7 +155,7 @@ export default function AdminBoardMembersPage() {
 
   const handleTogglePublish = async (member: BoardMember) => {
     try {
-      const payload = {
+      const payload: BoardMember = {
         ...member,
         is_published: !member.is_published,
       };
