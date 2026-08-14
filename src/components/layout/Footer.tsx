@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Phone, MapPin, Mail, Facebook, Instagram, Youtube, Linkedin } from 'lucide-react';
+import { FaFacebook as Facebook,FaInstagram as Instagram, FaYoutube as Youtube, FaLinkedin as Linkedin } from 'react-icons/fa'
+import { Phone, MapPin, Mail } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { ContactInfo } from '@/types';
