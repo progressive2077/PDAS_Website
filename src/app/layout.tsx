@@ -18,12 +18,12 @@ const merriweather = Merriweather({
 });
 
 export const metadata: Metadata = {
-  title: 'Progressive Cattle Fodder Industries Pvt. Ltd.',
+  title: 'Progressive Dairy and Agro Solutions Pvt. Ltd.',
   description:
-    'Nepal\'s trusted manufacturer of high-quality bale silage and mash cattle feed. Providing premium livestock nutrition solutions for over four years.',
-  keywords: 'cattle feed, silage, bale silage, mash cattle feed, Nepal, livestock, fodder',
+    'Nepal\'s trusted livestock and agricultural solutions provider.',
+  keywords: 'milking machine, chaff cutter, hay baler, milking equipment,  livestock, AI, animal husbandry, dairy farming, agriculture, farm equipment, Nepal',
   icons: {
-    icon: '/images/branding/logo.svg',
+    icon: '/images/branding/logo.jfif',
   },
   manifest: '/manifest.json',
 };
